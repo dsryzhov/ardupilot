@@ -1026,11 +1026,15 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
 // }
 
 
-// LUALIB_API lua_State *luaL_newstate (void) {
-//   lua_State *L = lua_newstate(l_alloc, NULL);
-//   if (L) lua_atpanic(L, &panic);
-//   return L;
-// }
+ LUALIB_API lua_State *luaL_newstate (void) {
+	 /*
+   lua_State *L = lua_newstate(l_alloc, NULL);
+   if (L) lua_atpanic(L, &panic);
+   return L;
+   */
+   lua_State *L = NULL;
+   return L;
+}
 
 
 LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver, size_t sz) {
