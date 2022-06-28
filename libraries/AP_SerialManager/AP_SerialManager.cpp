@@ -141,6 +141,8 @@ const AP_Param::GroupInfo AP_SerialManager::var_info[] = {
     // @User: Standard
     // @RebootRequired: True
     AP_GROUPINFO("1_PROTOCOL",  1, AP_SerialManager, state[1].protocol, SerialProtocol_MAVLink2),
+	//AP_GROUPINFO("1_PROTOCOL",  1, AP_SerialManager, state[1].protocol, SerialProtocol_GPS),
+	
 
     // @Param: 1_BAUD
     // @DisplayName: Telem1 Baud Rate
@@ -148,6 +150,7 @@ const AP_Param::GroupInfo AP_SerialManager::var_info[] = {
     // @Values: 1:1200,2:2400,4:4800,9:9600,19:19200,38:38400,57:57600,111:111100,115:115200,230:230400,256:256000,460:460800,500:500000,921:921600,1500:1500000
     // @User: Standard
     AP_GROUPINFO("1_BAUD", 2, AP_SerialManager, state[1].baud, AP_SERIALMANAGER_MAVLINK_BAUD/1000),
+	//AP_GROUPINFO("1_BAUD", 2, AP_SerialManager, state[1].baud, 9),
 #endif
 
 #if SERIALMANAGER_NUM_PORTS > 2
@@ -181,7 +184,8 @@ const AP_Param::GroupInfo AP_SerialManager::var_info[] = {
     // @Description: The baud rate used for the Serial 3 (GPS). Most stm32-based boards can support rates of up to 1500. If you setup a rate you cannot support and then can't connect to your board you should load a firmware from a different vehicle type. That will reset all your parameters to defaults.
     // @CopyValuesFrom: SERIAL1_BAUD
     // @User: Standard
-    AP_GROUPINFO("3_BAUD", 6, AP_SerialManager, state[3].baud, AP_SERIALMANAGER_GPS_BAUD/1000),
+//    AP_GROUPINFO("3_BAUD", 6, AP_SerialManager, state[3].baud, AP_SERIALMANAGER_GPS_BAUD/1000),
+    AP_GROUPINFO("3_BAUD", 6, AP_SerialManager, state[3].baud, 9),
 #endif
 
 #if SERIALMANAGER_NUM_PORTS > 4
@@ -442,12 +446,23 @@ void AP_SerialManager::init()
 
     init_console();
 
+	hal.console->printf("\nSerial count: %u", (unsigned int)hal.num_serial); 
+	
     // initialise serial ports
     for (uint8_t i=1; i<SERIALMANAGER_NUM_PORTS; i++) {
         auto *uart = hal.serial(i);
 
         if (uart != nullptr) {
             set_options(i);
+			
+			unsigned int ci = i;
+			unsigned int cp = state[i].protocol;
+			unsigned int cb = state[i].baud;
+			unsigned int ca = (unsigned int)&state[i];
+			hal.console->printf("\nUart num: %u", ci); 
+			hal.console->printf("\nUart protocol: %u", cp); 
+			hal.console->printf("\nUart baud: %u", cb); 
+			hal.console->printf("\nUart address: %u", ca); 
             switch (state[i].protocol) {
                 case SerialProtocol_None:
 #if HAL_GCS_ENABLED
@@ -479,6 +494,7 @@ void AP_SerialManager::init()
                     break;
                 case SerialProtocol_GPS:
                 case SerialProtocol_GPS2:
+					hal.console->printf("Starting GPS uart num %u", ci); 
                     uart->begin(map_baudrate(state[i].baud), 
                                          AP_SERIALMANAGER_GPS_BUFSIZE_RX,
                                          AP_SERIALMANAGER_GPS_BUFSIZE_TX);

@@ -28,19 +28,6 @@
 #define PROBE_MAG_IMU_I2C(driver, imudev, bus, addr, args ...) ADD_BACKEND(DRIVER_ ##driver, AP_Compass_ ## driver::probe_ ## imudev(GET_I2C_DEVICE(bus,addr),##args))
 //------------------------------------
 
-//#define HAL_GPIO_PIN_SAFETY_IN
-
-#define AP_BATT_MONITOR_MAX_INSTANCES 1
-#define HAL_BATT_MONITOR_DEFAULT 3
-#define HAL_BATT_VOLT_PIN 36
-#define HAL_BATT_VOLT_SCALE 5.268426
-#define HAL_BATT_CURR_PIN -1
-#define HAL_BATT_CURR_SCALE 1
-
-#define HAL_UART_NUM_SERIAL_PORTS 4
-#define GPS_MAX_RECEIVERS 2
-
-#define HAL_ESP32_NO_MAVLINK_0 1
 
 //#define CONFIG_HAL_BOARD 12
 //#define HAL_BOARD_ESP32 12
@@ -82,21 +69,12 @@
 // MAG/COMPASS probing:
 //#define HAL_MAG_PROBE_LIST ADD_BACKEND(DRIVER_ICM20948, AP_Compass_AK09916::probe_ICM20948_I2C(0, ROTATION_NONE));
 // BARO probing:
-#define HAL_BARO_PROBE_LIST PROBE_BARO_I2C(BMP280, 0, 0x76)
+//#define HAL_BARO_PROBE_LIST PROBE_BARO_I2C(BMP280, 0, 0x77)
 
-#define HAL_BARO_DEFAULT HAL_BARO_BMP280_I2C
-#define HAL_BARO_BMP280_BUS 0
-#define HAL_BARO_BMP280_I2C_ADDR  (0x76)
-
-
-#define HAL_COMPASS_MAX_SENSORS 1
-//#define HAL_MAG_PROBE_LIST PROBE_MAG_I2C(QMC5883L, 0, 0x0D, ROTATION_NONE)
-
-#define HAL_MAG_PROBE_LIST ADD_BACKEND(DRIVER_QMC5883L, AP_Compass_QMC5883L::probe(GET_I2C_DEVICE(0, 0x0D), true, ROTATION_NONE));
 
 
 // allow boot without a baro
-//#define HAL_BARO_ALLOW_INIT_NO_BARO 1
+#define HAL_BARO_ALLOW_INIT_NO_BARO 1
 
 
 // ADC is available on lots of pints on the esp32, but adc2 cant co-exist with wifi we choose to allow ADC on :
@@ -115,9 +93,9 @@
 }
 #define HAL_ESP32_ADC_PINS_OPTION2 {\
 	{ADC1_GPIO35_CHANNEL, 11, 35},\
-	{ADC1_GPIO34_CHANNEL, 0.00080586, 34},\
+	{ADC1_GPIO34_CHANNEL, 11, 34},\
 	{ADC1_GPIO39_CHANNEL, 11, 39},\
-	{ADC1_GPIO36_CHANNEL, 0.00080586, 36}\
+	{ADC1_GPIO36_CHANNEL, 11, 36}\
 }
 // pick one:
 //#define HAL_ESP32_ADC_PINS HAL_ESP32_ADC_PINS_OPTION1
@@ -144,15 +122,14 @@
 //#define HAL_BARO_PROBE_LIST PROBE_BARO_SPI(BMP280, "bmp280")
 
 // 2 use udp, 1 use tcp...  for udp,client needs to connect as UDPCL in missionplanner etc to 192.168.4.1 port 14550
-//#define HAL_ESP32_WIFI 1
+#define HAL_ESP32_WIFI 1
 
 // tip: if u are ok getting mavlink-over-tcp or mavlink-over-udp and want to disable mavlink-over-serial-usb
 //then set ardupilot parameter SERIAL0_PROTOCOL = 0 and reboot.
 // u also will/may want..
-#define LOG_BACKEND_TYPE 1
-#define LOG_DISARMED 1
-//#define SERIAL0_PROTOCOL 0
-#define HAL_SERIAL2_PROTOCOL SerialProtocol_GPS
+//LOG_BACKEND_TYPE 1
+//LOG_DISARMED 1
+//SERIAL0_PROTOCOL 0
 
 
 // see boards.py
@@ -166,45 +143,40 @@
 //RCOUT which pins are used?
 
 
-#define HAL_ESP32_RCOUT { GPIO_NUM_33,GPIO_NUM_32, GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_27} 
+#define HAL_ESP32_RCOUT { GPIO_NUM_33,GPIO_NUM_32, GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_17, GPIO_NUM_16 } 
 
 // SPI BUS setup, including gpio, dma, etc
 // note... we use 'vspi' for the bmp280 and mpu9250
 
 // tip:  VSPI_HOST  is an alternative name for esp's SPI3
 #define HAL_ESP32_SPI_BUSES {}
-//#define HAL_ESP32_SPI_BUSES  {.host=VSPI_HOST, .dma_ch=1, .mosi=GPIO_NUM_23, .miso=GPIO_NUM_19, .sclk=GPIO_NUM_18}
 
+// SPI per-device setup, including speeds, etc.
 #define HAL_ESP32_SPI_DEVICES {}
-//#define HAL_ESP32_SPI_DEVICES  {.name="SDCARD", .bus=0, .device=1, .cs=GPIO_NUM_5, .mode=0, .lspeed=1*MHZ, .hspeed=6*MHZ}
-	
-//I2C bus list
 
+//I2C bus list
 #define HAL_ESP32_I2C_BUSES \
-	{.port=I2C_NUM_0, .sda=GPIO_NUM_21, .scl=GPIO_NUM_22, .speed=400*KHZ, .internal=true}
+	{.port=I2C_NUM_0, .sda=GPIO_NUM_4, .scl=GPIO_NUM_5, .speed=400*KHZ, .internal=true}
 
 
 // rcin on what pin?
-#define HAL_ESP32_RCIN GPIO_NUM_14
+#define HAL_ESP32_RCIN GPIO_NUM_13
 
 
 //HARDWARE UARTS
 #define HAL_ESP32_UART_DEVICES \
-  {.port=UART_NUM_0, .rx=GPIO_NUM_3, .tx=GPIO_NUM_1 },{.port=UART_NUM_1, .rx=GPIO_NUM_16, .tx=GPIO_NUM_17 },{.port=UART_NUM_2, .rx=GPIO_NUM_13, .tx=GPIO_NUM_12}
+  {.port=UART_NUM_0, .rx=GPIO_NUM_3, .tx=GPIO_NUM_1 },{.port=UART_NUM_1, .rx=GPIO_NUM_18, .tx=GPIO_NUM_19 }
 
-#define HAVE_FILESYSTEM_SUPPORT 1
+//#define HAVE_FILESYSTEM_SUPPORT 1
 
 // Do u want to use mmc or spi mode for the sd card, this is board specific ,
 //  as mmc uses specific pins but is quicker,
-//#define HAL_ESP32_SDMMC 0
+#define HAL_ESP32_SDMMC 0
 // and spi is more flexible pinouts....  dont forget vspi/hspi should be selected to NOT conflict with SPI_BUSES above
 //#define HAL_ESP32_SDSPI {.host=VSPI_HOST, .dma_ch=2, .mosi=GPIO_NUM_2, .miso=GPIO_NUM_15, .sclk=GPIO_NUM_14, .cs=GPIO_NUM_21}
 
-#define HAL_ESP32_SDSPI {.host=VSPI_HOST, .dma_ch=2, .mosi=GPIO_NUM_23, .miso=GPIO_NUM_19, .sclk=GPIO_NUM_18, .cs=GPIO_NUM_5}
-
-
-#define HAL_ESP32_SDCARD 1
-#define LOGGER_MAVLINK_SUPPORT 0
+#define HAL_ESP32_SDCARD 0
+#define LOGGER_MAVLINK_SUPPORT 1
 #define HAL_BOARD_LOG_DIRECTORY "/SDCARD/APM/LOGS"
 #define HAL_BOARD_TERRAIN_DIRECTORY "/SDCARD/APM/TERRAIN"
 #define HAL_BOARD_STORAGE_DIRECTORY "/SDCARD/APM/STORAGE"
@@ -214,4 +186,3 @@
 // setting to 2 means log-over-mavlink to a companion computer etc.
 #define HAL_LOGGING_BACKENDS_DEFAULT 1
 
-#define LOGGING_ENABLED 1

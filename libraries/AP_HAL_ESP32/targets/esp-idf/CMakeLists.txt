@@ -58,11 +58,10 @@ IF(${ARDUPILOT_CMD} STREQUAL "sub")
     target_link_libraries(${elf_file} "${ARDUPILOT_LIB}/libArduSub_libs.a")
 ENDIF()
 
-
-message("Building for Hello")
-target_link_libraries(${elf_file} "${ARDUPILOT_LIB}/libhello_libs.a")
-target_link_libraries(${elf_file} "${ARDUPILOT_LIB}/libap.a")
-target_link_libraries(${elf_file} "${ARDUPILOT_LIB}/examples/libHello.a")
+IF(${ARDUPILOT_CMD} STREQUAL "build")
+	message("Linking example")
+	target_link_libraries(${elf_file} "${EXAMPLE_LIB}/${EXAMPLE_NAME}")
+ENDIF()
 
 add_custom_target(showinc ALL
         COMMAND echo -e

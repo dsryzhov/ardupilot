@@ -94,6 +94,7 @@ AnalogSource::AnalogSource(int16_t ardupin,int16_t pin,float scaler, float initi
         gpio_num_t gpio;
         //Configure ADC
         if (unit == 1) {
+            adc1_config_width(ADC_WIDTH_BIT_12);
             adc1_config_channel_atten((adc1_channel_t)_pin, atten);
             adc1_pad_get_io_num((adc1_channel_t)_pin, &gpio);
         } else {
@@ -161,6 +162,8 @@ float AnalogSource::voltage_average()
    */
 float AnalogSource::voltage_latest()
 {
+    //hal.console->printf("\nLatest value: %f", _latest_value);
+    //hal.console->printf("\nScaling: %f", _scaler);
     return _scaler * read_latest();
 }
 
@@ -198,6 +201,7 @@ bool AnalogSource::set_pin(uint8_t ardupin)
         gpio_num_t gpio; // new gpio
         //Configure ADC
         if (_unit == 1) {
+            adc1_config_width(ADC_WIDTH_BIT_12);
             adc1_config_channel_atten((adc1_channel_t)newgpioAdcPin, atten);
             adc1_pad_get_io_num((adc1_channel_t)newgpioAdcPin, &gpio);
         } else {
@@ -240,13 +244,17 @@ void AnalogSource::_add_value()
     int value = 0;
     if (_unit == 1) {
         value = adc1_get_raw((adc1_channel_t)_pin);
+        //hal.console->printf("\nlatest_value: %d from pin %d", value, _pin);        
     } else {
         adc2_get_raw((adc2_channel_t)_pin, ADC_WIDTH_BIT_12, &value);
+//        hal.console->printf("\nadc2_get_raw:");        
     }
 
     _latest_value = value;
     _sum_value += value;
     _sum_count++;
+
+
 
     if (_sum_count == 254) {
         _sum_value /= 2;
@@ -290,7 +298,7 @@ void AnalogIn::_timer_tick()
         ESP32::AnalogSource *c = _channels[j];
         if (c != nullptr) {
             // add a value
-            //c->_add_value();
+            c->_add_value();
         }
     }
 

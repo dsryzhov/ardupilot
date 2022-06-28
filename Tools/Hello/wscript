@@ -1,51 +1,7 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
-
-
 def build(bld):
     vehicle = bld.path.name
-    bld.ap_stlib(
-        name='hello_libs',
-        ap_vehicle='UNKNOWN',
-        ap_libraries=bld.ap_common_vehicle_libraries()+[
-            'AP_FlashStorage',
-			'AP_Filesystem',
-			'AP_InternalError',
-			'AP_HAL',
-			'AP_Common',
-			'AP_RCProtocol',
-			'GCS_MAVLink',
-			'AP_Rally',
-			'StorageManager',
-			'AP_RCTelemetry',
-			'AP_Arming',
-			'AP_VisualOdom',
-			'AC_Fence',
-			'AP_GPS',
-			'AP_Logger',
-			'AP_InertialSensor',
-			'AP_BattMonitor',
-			'AP_Baro',
-			'AP_Compass',
-			'AP_AHRS',
-			'AP_Notify',
-			'AP_Math',
-			'AP_NavEKF2',
-			'AP_NavEKF3',
-			'AP_DAL',
-			'AP_ExternalAHRS',
-			'AP_VideoTX',
-			'AP_Param',
-			'AP_OSD',
-			'AP_RCMapper',
-			'AP_Scripting',
-        ],
-    )
 
-
-    bld.ap_program(
-		program_name='Hello',
-        program_groups=['examples'],
-        use=['ap','hello_libs'],
+    bld.ap_example(
+        program_name='Scheduler_test',	
+        use=['ap','ExampleLibs'],
     )

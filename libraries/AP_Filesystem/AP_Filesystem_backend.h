@@ -44,6 +44,7 @@ class AP_Filesystem_Backend {
 public:
     // functions that closely match the equivalent posix calls
     virtual int open(const char *fname, int flags) {
+		printf("Inside FS Backend");
         return -1;
     }
     virtual int close(int fd) { return -1; }

@@ -96,8 +96,11 @@ AP_Scheduler *AP_Scheduler::get_singleton()
 // initialise the scheduler
 void AP_Scheduler::init(const AP_Scheduler::Task *tasks, uint8_t num_tasks, uint32_t log_performance_bit)
 {
+    hal.console->printf("\nStart AP_Scheduler::init");
     // grab the semaphore before we start anything
     _rsem.take_blocking();
+
+    hal.console->printf("\nAfter _rsem.take_blocking()");
 
     // only allow 50 to 2000 Hz
     if (_loop_rate_hz < 50) {
@@ -112,8 +115,10 @@ void AP_Scheduler::init(const AP_Scheduler::Task *tasks, uint8_t num_tasks, uint
 
     AP_Vehicle* vehicle = AP::vehicle();
     if (vehicle != nullptr) {
+        hal.console->printf("vehicle != nullptr)");
         vehicle->get_common_scheduler_tasks(_common_tasks, _num_common_tasks);
-    }
+    } else 
+        hal.console->printf("vehicle == nullptr)");
 
     _num_tasks = _num_vehicle_tasks + _num_common_tasks;
 

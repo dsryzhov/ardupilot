@@ -160,6 +160,8 @@ bool AP_InertialSensor_Invensense::_init()
 void AP_InertialSensor_Invensense::_fifo_reset(bool log_error)
 {
     uint32_t now = AP_HAL::millis();
+    //uint32_t now = (uint32_t) (AP_HAL::micros64() / 1000U);
+
     if (log_error &&
         !hal.scheduler->in_expected_delay() &&
         now - last_reset_ms < 10000) {
@@ -548,7 +550,14 @@ bool AP_InertialSensor_Invensense::_accumulate(uint8_t *samples, uint8_t n_sampl
         int16_t t2 = int16_val(data, 3);
         if (!_check_raw_temp(t2)) {
             if (!hal.scheduler->in_expected_delay()) {
-                debug("temp reset IMU[%u] %d %d", _accel_instance, _raw_temp, t2);
+                debug("temp reset IMU in accumulate[%u] %d %d", _accel_instance, _raw_temp, t2);
+
+                float temp1 = _raw_temp * temp_sensitivity + temp_zero;
+                float temp2 = t2 * temp_sensitivity + temp_zero;
+
+                hal.console->printf("\nRaw tempreature %f", temp1);
+                hal.console->printf("\nt2 %f", temp2);
+
             }
             _fifo_reset(true);
             return false;
@@ -594,6 +603,8 @@ bool AP_InertialSensor_Invensense::_accumulate_sensor_rate_sampling(uint8_t *sam
         if (!_check_raw_temp(t2)) {
             if (!hal.scheduler->in_expected_delay()) {
                 debug("temp reset IMU[%u] %d %d", _accel_instance, _raw_temp, t2);
+                hal.console->printf("\nRaw tempreature %u", (unsigned int)_raw_temp);
+                hal.console->printf("\nt2 %u", (unsigned int)t2);
             }
             _fifo_reset(true);
             ret = false;
@@ -778,6 +789,7 @@ check_registers:
 /*
   fetch temperature in order to detect FIFO sync errors
 */
+/*
 bool AP_InertialSensor_Invensense::_check_raw_temp(int16_t t2)
 {
     if (abs(t2 - _raw_temp) < 400) {
@@ -790,6 +802,32 @@ bool AP_InertialSensor_Invensense::_check_raw_temp(int16_t t2)
     }
     return (abs(t2 - _raw_temp) < 800);
 }
+*/
+/*
+  fetch temperature in order to detect FIFO sync errors
+*/
+
+bool AP_InertialSensor_Invensense::_check_raw_temp(int16_t t2)
+{
+    if (abs(t2 - _raw_temp) < 400) {
+        // cached copy OK
+        return true;
+    }
+    uint8_t trx[2];
+    bool res;
+    if (_block_read(MPUREG_TEMP_OUT_H, trx, 2)) {
+       // _raw_temp = int16_val(trx, 0);
+        t2 = int16_val(trx, 0);
+        res = (abs(t2 - _raw_temp) < 800);
+        _raw_temp = t2;
+    }
+    else
+        res = (abs(t2 - _raw_temp) < 800);
+    
+    return res;
+    //return (abs(t2 - _raw_temp) < 800);
+}
+
 
 bool AP_InertialSensor_Invensense::_block_read(uint8_t reg, uint8_t *buf,
                                             uint32_t size)

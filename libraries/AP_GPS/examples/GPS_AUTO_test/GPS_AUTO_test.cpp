@@ -59,6 +59,8 @@ void setup()
     // Initialize the UART for GPS system
     serial_manager.init();
     gps.init(serial_manager);
+	
+	hal.console->printf("GPS is initialized\n");
 }
 
 
@@ -91,6 +93,8 @@ void loop()
 
     // Update GPS state based on possible bytes received from the module.
     gps.update();
+	
+
 
     // If new GPS data is received, output it's contents to the console
     // Here we rely on the time of the message in GPS class and the time of last message
@@ -103,19 +107,21 @@ void loop()
         // Acquire location
         const Location &loc = gps.location();
 
-        // Print the contents of message
-        hal.console->printf("Lat: ");
-        print_latlon(hal.console, loc.lat);
-        hal.console->printf(" Lon: ");
-        print_latlon(hal.console, loc.lng);
-        hal.console->printf(" Alt: %.2fm GSP: %.2fm/s CoG: %d SAT: %d TIM: %u/%lu STATUS: %u\n",
-                            (double)(loc.alt * 0.01f),
-                            (double)gps.ground_speed(),
-                            (int)gps.ground_course(),
-                            gps.num_sats(),
-                            gps.time_week(),
-                            (long unsigned int)gps.time_week_ms(),
-                            gps.status());
+		if (gps.status() == 3) {
+			// Print the contents of message
+			hal.console->printf("Lat: ");
+			print_latlon(hal.console, loc.lat);
+			hal.console->printf(" Lon: ");
+			print_latlon(hal.console, loc.lng);
+			hal.console->printf(" Alt: %.2fm GSP: %.2fm/s CoG: %d SAT: %d TIM: %u/%lu STATUS: %u\n",
+								(double)(loc.alt * 0.01f),
+								(double)gps.ground_speed(),
+								(int)gps.ground_course(),
+								gps.num_sats(),
+								gps.time_week(),
+								(long unsigned int)gps.time_week_ms(),
+								gps.status());
+		}
     }
 
     // Delay for 10 mS will give us 100 Hz invocation rate

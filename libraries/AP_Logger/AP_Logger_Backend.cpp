@@ -196,21 +196,28 @@ bool AP_Logger_Backend::Write_Emit_FMT(uint8_t msg_type)
         // message for a msg_type, but the frontend can't supply the
         // required information
         INTERNAL_ERROR(AP_InternalError::error_t::logger_missing_logstructure);
+		
+		//hal.console->printf("\nWrite_Emit_FMT false 1");
         return false;
     }
 
     if (!Write_Format(&logstruct)) {
+		//hal.console->printf("\nWrite_Emit_FMT false 2");
         return false;
     }
     if (!Write_Format_Units(&logstruct)) {
+		//hal.console->printf("\nWrite_Emit_FMT false 3");
         return false;
     }
 
+	//hal.console->printf("\nWrite_Emit_FMT true");
     return true;
 }
 
 bool AP_Logger_Backend::Write(const uint8_t msg_type, va_list arg_list, bool is_critical, bool is_streaming)
 {
+	//hal.console->printf("Inside AP_Logger_Backend::Write");
+	
     // stack-allocate a buffer so we can WriteBlock(); this could be
     // 255 bytes!  If we were willing to lose the WriteBlock
     // abstraction we could do WriteBytes() here instead?
@@ -399,24 +406,35 @@ void AP_Logger_Backend::validate_WritePrioritisedBlock(const void *pBuffer,
 }
 #endif
 
+bool flStartedLog = false;
 bool AP_Logger_Backend::WritePrioritisedBlock(const void *pBuffer, uint16_t size, bool is_critical, bool writev_streaming)
 {
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL && !APM_BUILD_TYPE(APM_BUILD_Replay)
     validate_WritePrioritisedBlock(pBuffer, size);
 #endif
+
     if (!ShouldLog(is_critical)) {
+        //hal.console->printf("\nAP_Logger_Backend::WritePrioritisedBlock Should log false");
         return false;
     }
+
+    if (!flStartedLog) {
+        start_new_log();
+        flStartedLog = true;
+    }
+
     if (StartNewLogOK()) {
         start_new_log();
     }
     if (!WritesOK()) {
+        //hal.console->printf("\nAP_Logger_Backend::WritePrioritisedBlock Writes ok false");
         return false;
     }
 
     if (!is_critical && rate_limiter != nullptr) {
         const uint8_t *msgbuf = (const uint8_t *)pBuffer;
         if (!rate_limiter->should_log(msgbuf[2], writev_streaming)) {
+            //hal.console->printf("\nAP_Logger_Backend::WritePrioritisedBlock rate false");
             return false;
         }
     }

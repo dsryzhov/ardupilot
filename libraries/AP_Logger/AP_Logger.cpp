@@ -26,6 +26,8 @@ extern const AP_HAL::HAL& hal;
 #endif
 #endif
 
+#define HAL_LOGGING_STACK_SIZE 4096
+
 #ifndef HAL_LOGGING_STACK_SIZE
 #define HAL_LOGGING_STACK_SIZE 1324
 #endif
@@ -42,6 +44,8 @@ extern const AP_HAL::HAL& hal;
 #ifndef HAL_LOGGER_ARM_PERSIST
 #define HAL_LOGGER_ARM_PERSIST 15
 #endif
+
+#define HAL_LOGGING_FILESYSTEM_ENABLED 1
 
 #ifndef HAL_LOGGING_BACKENDS_DEFAULT
 # if HAL_LOGGING_FILESYSTEM_ENABLED && (CONFIG_HAL_BOARD == HAL_BOARD_SITL)
@@ -213,7 +217,9 @@ void AP_Logger::Init(const struct LogStructure *structures, uint8_t num_types)
         _next_backend++;
     }
 
+	//hal.console->printf("\n_next_backend: %u", (unsigned int)_next_backend);
     for (uint8_t i=0; i<_next_backend; i++) {
+		//hal.console->printf("\nCalling backend init: %u", (unsigned int)i);
         backends[i]->Init();
     }
 
@@ -908,6 +914,7 @@ void AP_Logger::Write(const char *name, const char *labels, const char *fmt, ...
 
 void AP_Logger::Write(const char *name, const char *labels, const char *units, const char *mults, const char *fmt, ...)
 {
+	//hal.console->printf("AP_Logger::Write");
     va_list arg_list;
 
     va_start(arg_list, fmt);
@@ -954,6 +961,7 @@ void AP_Logger::WriteCritical(const char *name, const char *labels, const char *
 void AP_Logger::WriteV(const char *name, const char *labels, const char *units, const char *mults, const char *fmt, va_list arg_list,
                        bool is_critical, bool is_streaming)
 {
+	//hal.console->printf("\nInside AP_Logger::WriteV");
     // WriteV is not safe in replay as we can re-use IDs
     const bool direct_comp = APM_BUILD_TYPE(APM_BUILD_Replay);
     struct log_write_fmt *f = msg_fmt_for_name(name, labels, units, mults, fmt, direct_comp);
@@ -963,18 +971,22 @@ void AP_Logger::WriteV(const char *name, const char *labels, const char *units, 
 #if !APM_BUILD_TYPE(APM_BUILD_Replay)
         INTERNAL_ERROR(AP_InternalError::error_t::logger_mapfailure);
 #endif
+		hal.console->printf("\nunable to map name to a messagetype");
         return;
     }
 
+	//hal.console->printf("\nBefore backend write cycle");
     for (uint8_t i=0; i<_next_backend; i++) {
         if (!(f->sent_mask & (1U<<i))) {
             if (!backends[i]->Write_Emit_FMT(f->msg_type)) {
+				//hal.console->printf("\nFMT return false");
                 continue;
             }
             f->sent_mask |= (1U<<i);
         }
         va_list arg_copy;
         va_copy(arg_copy, arg_list);
+		//hal.console->printf("\nWriting backend %u", (unsigned int)i);
         backends[i]->Write(f->msg_type, arg_copy, is_critical, is_streaming);
         va_end(arg_copy);
     }

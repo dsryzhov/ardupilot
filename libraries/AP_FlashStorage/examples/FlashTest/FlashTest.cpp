@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <AP_HAL/utility/sparse-endian.h>
 
+
+
 const AP_HAL::HAL& hal = AP_HAL::get_HAL();
 
 class FlashTest : public AP_HAL::HAL::Callbacks {
@@ -120,11 +122,14 @@ void FlashTest::write(uint16_t offset, const uint8_t *data, uint16_t length)
 {
     memcpy(&mem_mirror[offset], data, length);
     memcpy(&mem_buffer[offset], data, length);
+	
+	
     if (!storage.write(offset, length)) {
         if (erase_ok) {
             printf("Failed to write at %u for %u\n", offset, length);
         }
     }
+	
 }
 
 /*
@@ -137,17 +142,27 @@ void FlashTest::setup(void)
 
 void FlashTest::loop(void)
 {
+    // 32768	
+	//hal.console->printf("Flash sector size : %u", (unsigned int)flash_sector_size);
     flash[0] = (uint8_t *)malloc(flash_sector_size);
     flash[1] = (uint8_t *)malloc(flash_sector_size);
-    flash_erase(0);
+	
+	//hal.console->printf("flash[0] address : %u", (unsigned int)flash[0]);
+	//hal.console->printf("flash[1] address : %u", (unsigned int)flash[1]);
+    
+	flash_erase(0);
     flash_erase(1);
+	
 
     if (!storage.init()) {
         AP_HAL::panic("Failed first init()");
     }
 
     // fill with 10k random writes
-    for (uint32_t i=0; i<5000000; i++) {
+	
+	
+    //for (uint32_t i=0; i<5000000; i++) {
+	for (uint32_t i=0; i<5000; i++) {
         uint16_t ofs = get_random16() % sizeof(mem_buffer);
         uint16_t length = get_random16() & 0x1F;
         length = MIN(length, sizeof(mem_buffer) - ofs);
@@ -165,6 +180,7 @@ void FlashTest::loop(void)
             }
         }
     }
+	
 
     // force final write to allow for flush with erase_ok
     erase_ok = true;
@@ -185,10 +201,13 @@ void FlashTest::loop(void)
     if (memcmp(mem_buffer, mem_mirror, sizeof(mem_buffer)) != 0) {
         AP_HAL::panic("FATAL: data mis-match");
     }
+
     while (true) {
-        hal.console->printf("TEST PASSED");
-        hal.scheduler->delay(20000);
+        hal.console->printf("\nTEST PASSED");
+        hal.scheduler->delay(1000);
     }
+	
+	
 }
 
 FlashTest flashtest;

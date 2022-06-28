@@ -14,6 +14,7 @@
  */
 
 #include "AP_WindVane_Analog.h"
+#include <stdio.h>
 
 #define WINDVANE_CALIBRATION_VOLT_DIFF_MIN  1.0f    // calibration routine's min voltage difference required for success
 
@@ -34,6 +35,9 @@ void AP_WindVane_Analog::update_direction()
 
     const float voltage_ratio = linear_interpolate(0.0f, 1.0f, _current_analog_voltage, _frontend._dir_analog_volt_min, _frontend._dir_analog_volt_max);
     const float direction = (voltage_ratio * radians(360 - _frontend._dir_analog_deadzone)) + radians(_frontend._dir_analog_bearing_offset);
+//    printf("\nAnalog voltage: %f ", _current_analog_voltage);
+//    printf("\nVoltage ration: %f ", voltage_ratio);
+//    printf("\nDirection: %f ", direction);
 
     _frontend._direction_apparent_raw  = wrap_PI(direction);
 }

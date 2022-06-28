@@ -66,7 +66,7 @@ AP_BattMonitor_Analog::AP_BattMonitor_Analog(AP_BattMonitor &mon,
     
     _volt_pin_analog_source = hal.analogin->channel(_volt_pin);
     _curr_pin_analog_source = hal.analogin->channel(_curr_pin);
-
+    hal.console->printf("\nAP_BattMonitor_Analog::AP_BattMonitor_Analog");        
 }
 
 // read - read the voltage and current
@@ -76,8 +76,11 @@ AP_BattMonitor_Analog::read()
     // this copes with changing the pin at runtime
     _state.healthy = _volt_pin_analog_source->set_pin(_volt_pin);
 
+    
     // get voltage
     _state.voltage = (_volt_pin_analog_source->voltage_average() - _volt_offset) * _volt_multiplier;
+
+    //hal.console->printf("\nAP_BattMonitor_Analog::read: %f", _state.voltage);        
 
     // read current
     if (has_current()) {

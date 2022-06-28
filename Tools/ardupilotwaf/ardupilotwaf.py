@@ -297,9 +297,11 @@ def ap_program(bld,
     for group in program_groups:
         _grouped_programs.setdefault(group, []).append(tg)
 
+
 @conf
 def ap_example(bld, **kw):
     kw['program_groups'] = 'examples'
+    kw['use'] = ['ap','ExampleLibs']
     ap_program(bld, use_legacy_defines=False, **kw)
 
 def unique_list(items):

@@ -71,6 +71,7 @@ const uint32_t AP_GPS::_baudrates[] = {9600U, 115200U, 4800U, 19200U, 38400U, 57
 // initialisation blobs to send to the GPS to try to get it into the
 // right mode
 const char AP_GPS::_initialisation_blob[] =
+//    UBLOX_SET_BINARY_115200
     UBLOX_SET_BINARY_230400
 #if AP_GPS_SIRF_ENABLED
     SIRF_SET_BINARY
@@ -87,7 +88,8 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @Values: 0:None,1:AUTO,2:uBlox,5:NMEA,6:SiRF,7:HIL,8:SwiftNav,9:DroneCAN,10:SBF,11:GSOF,13:ERB,14:MAV,15:NOVA,16:HemisphereNMEA,17:uBlox-MovingBaseline-Base,18:uBlox-MovingBaseline-Rover,19:MSP,20:AllyStar,21:ExternalAHRS,22:DroneCAN-MovingBaseline-Base,23:DroneCAN-MovingBaseline-Rover
     // @RebootRequired: True
     // @User: Advanced
-    AP_GROUPINFO("_TYPE",    0, AP_GPS, _type[0], HAL_GPS_TYPE_DEFAULT),
+//    AP_GROUPINFO("_TYPE",    0, AP_GPS, _type[0], HAL_GPS_TYPE_DEFAULT),
+    AP_GROUPINFO("_TYPE",    0, AP_GPS, _type[0], 2),
 
 #if GPS_MAX_RECEIVERS > 1
     // @Param: _TYPE2
@@ -96,7 +98,7 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @Values: 0:None,1:AUTO,2:uBlox,5:NMEA,6:SiRF,7:HIL,8:SwiftNav,9:DroneCAN,10:SBF,11:GSOF,13:ERB,14:MAV,15:NOVA,16:HemisphereNMEA,17:uBlox-MovingBaseline-Base,18:uBlox-MovingBaseline-Rover,19:MSP,20:AllyStar,21:ExternalAHRS,22:DroneCAN-MovingBaseline-Base,23:DroneCAN-MovingBaseline-Rover
     // @RebootRequired: True
     // @User: Advanced
-    AP_GROUPINFO("_TYPE2",   1, AP_GPS, _type[1], 0),
+    AP_GROUPINFO("_TYPE2",   1, AP_GPS, _type[1], 2),
 #endif
 
     // @Param: _NAVFILTER
@@ -112,7 +114,7 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @Description: Automatic switchover to GPS reporting best lock, 1:UseBest selects the GPS with highest status, if both are equal the GPS with highest satellite count is used 4:Use primary if 3D fix or better, will revert to 'UseBest' behaviour if 3D fix is lost on primary
     // @Values: 0:Use primary, 1:UseBest, 2:Blend, 4:Use primary if 3D fix or better
     // @User: Advanced
-    AP_GROUPINFO("_AUTO_SWITCH", 3, AP_GPS, _auto_switch, (int8_t)GPSAutoSwitch::USE_BEST),
+    AP_GROUPINFO("_AUTO_SWITCH", 3, AP_GPS, _auto_switch, (int8_t)GPSAutoSwitch::BLEND),
 #endif
 
     // @Param: _MIN_DGPS
@@ -307,8 +309,10 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @Description: Additional backend specific options
     // @Bitmask: 0:Use UART2 for moving baseline on ublox,1:Use base station for GPS yaw on SBF,2:Use baudrate 115200,3:Use dedicated CAN port b/w GPSes for moving baseline
     // @User: Advanced
-    AP_GROUPINFO("_DRV_OPTIONS", 22, AP_GPS, _driver_options, 0),
+    //AP_GROUPINFO("_DRV_OPTIONS", 22, AP_GPS, _driver_options, 0),
+	//AP_GROUPINFO("_DRV_OPTIONS", 22, AP_GPS, _driver_options, 4),
 #endif
+	AP_GROUPINFO("_DRV_OPTIONS", 22, AP_GPS, _driver_options, 4),
 
 #if AP_GPS_SBF_ENABLED
     // @Param: _COM_PORT
@@ -437,6 +441,7 @@ void AP_GPS::init(const AP_SerialManager& serial_manager)
     for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
         if (needs_uart((GPS_Type)_type[i].get())) {
             _port[i] = serial_manager.find_serial(AP_SerialManager::SerialProtocol_GPS, uart_idx);
+			hal.console->printf("Serial port found %u %u\n", (unsigned int)i, (unsigned int)_port[i]);
             uart_idx++;
         }
     }
@@ -582,6 +587,7 @@ void AP_GPS::send_blob_update(uint8_t instance)
  */
 void AP_GPS::detect_instance(uint8_t instance)
 {
+	//hal.console->printf("GPS type: %u", (unsigned int)_type[instance]);
     AP_GPS_Backend *new_gps = nullptr;
     struct detect_state *dstate = &detect_state[instance];
     const uint32_t now = AP_HAL::millis();
@@ -663,10 +669,12 @@ void AP_GPS::detect_instance(uint8_t instance)
 #endif // HAL_BUILD_AP_PERIPH
 
     if (now - dstate->last_baud_change_ms > GPS_BAUD_TIME_MS) {
+
         // try the next baud rate
         // incrementing like this will skip the first element in array of bauds
         // this is okay, and relied upon
         dstate->current_baud++;
+		//hal.console->printf("\nInside auto detect baud rate: %u\n", (unsigned int)dstate->current_baud);
         if (dstate->current_baud == ARRAY_SIZE(_baudrates)) {
             dstate->current_baud = 0;
         }
@@ -677,6 +685,7 @@ void AP_GPS::detect_instance(uint8_t instance)
 
         if (_auto_config >= GPS_AUTO_CONFIG_ENABLE_SERIAL_ONLY && new_gps == nullptr) {
             if (_type[instance] == GPS_TYPE_UBLOX && (_driver_options & AP_GPS_Backend::DriverOptions::UBX_Use115200)) {
+				hal.console->printf("Here1");
                 static const char blob[] = UBLOX_SET_BINARY_115200;
                 send_blob_start(instance, blob, sizeof(blob));
             } else if ((_type[instance] == GPS_TYPE_UBLOX_RTK_BASE ||
@@ -686,19 +695,23 @@ void AP_GPS::detect_instance(uint8_t instance)
                 // more bandwidth. We don't do this if using UART2, as
                 // in that case the RTCMv3 data doesn't go over the
                 // link to the flight controller
+				hal.console->printf("Here2");
                 static const char blob[] = UBLOX_SET_BINARY_460800;
                 send_blob_start(instance, blob, sizeof(blob));
 #if AP_GPS_NMEA_ENABLED
             } else if (_type[instance] == GPS_TYPE_HEMI) {
+				hal.console->printf("Here4");
                 send_blob_start(instance, AP_GPS_NMEA_HEMISPHERE_INIT_STRING, strlen(AP_GPS_NMEA_HEMISPHERE_INIT_STRING));
 #endif // AP_GPS_NMEA_ENABLED        
             } else {
+				hal.console->printf("Here5");
                 send_blob_start(instance, _initialisation_blob, sizeof(_initialisation_blob));
             }
         }
     }
 
     if (_auto_config >= GPS_AUTO_CONFIG_ENABLE_SERIAL_ONLY && new_gps == nullptr) {
+		//hal.console->printf("Here6");
         send_blob_update(instance);
     }
 
@@ -719,6 +732,7 @@ void AP_GPS::detect_instance(uint8_t instance)
              (_baudrates[dstate->current_baud] >= 115200 && (_driver_options & AP_GPS_Backend::DriverOptions::UBX_Use115200)) ||
              _baudrates[dstate->current_baud] == 230400) &&
             AP_GPS_UBLOX::_detect(dstate->ublox_detect_state, data)) {
+			hal.console->printf("Detected ublox");
             new_gps = new AP_GPS_UBLOX(*this, state[instance], _port[instance], GPS_ROLE_NORMAL);
         }
 
@@ -733,12 +747,14 @@ void AP_GPS::detect_instance(uint8_t instance)
             } else {
                 role = GPS_ROLE_MB_ROVER;
             }
-            new_gps = new AP_GPS_UBLOX(*this, state[instance], _port[instance], role);
+			new_gps = new AP_GPS_UBLOX(*this, state[instance], _port[instance], role);
+			hal.console->printf("Detected ublox2");
         }
 #ifndef HAL_BUILD_AP_PERIPH
 #if AP_GPS_SBP2_ENABLED
         else if ((_type[instance] == GPS_TYPE_AUTO || _type[instance] == GPS_TYPE_SBP) &&
                  AP_GPS_SBP2::_detect(dstate->sbp2_detect_state, data)) {
+					 hal.console->printf("Detected ublox3");
             new_gps = new AP_GPS_SBP2(*this, state[instance], _port[instance]);
         }
 #endif //AP_GPS_SBP2_ENABLED
@@ -765,6 +781,7 @@ void AP_GPS::detect_instance(uint8_t instance)
                     _type[instance] == GPS_TYPE_HEMI ||
                     _type[instance] == GPS_TYPE_ALLYSTAR) &&
                    AP_GPS_NMEA::_detect(dstate->nmea_detect_state, data)) {
+					   hal.console->printf("Detected ublox4");
             new_gps = new AP_GPS_NMEA(*this, state[instance], _port[instance]);
         }
 #endif //AP_GPS_NMEA_ENABLED
@@ -780,6 +797,7 @@ found_gps:
         state[instance].status = NO_FIX;
         drivers[instance] = new_gps;
         timing[instance].last_message_time_ms = now;
+        hal.console->printf("Found gps: %u", timing[instance].last_message_time_ms);
         timing[instance].delta_time_ms = GPS_TIMEOUT_MS;
         new_gps->broadcast_gps_type();
     }
@@ -845,9 +863,13 @@ void AP_GPS::update_instance(uint8_t instance)
         send_blob_update(instance);
     }
 
+	//hal.console->print("There is active GPS istance");
     // we have an active driver for this instance
     bool result = drivers[instance]->read();
-    uint32_t tnow = AP_HAL::millis();
+    //uint32_t tnow = AP_HAL::millis();
+    uint32_t tnow = (uint32_t) (AP_HAL::micros64() / 1000U);
+
+    //uint32_t lmt = (uint32_t)timing[instance].last_message_time_ms;
 
     // if we did not get a message, and the idle timer of 2 seconds
     // has expired, re-initialise the GPS. This will cause GPS
@@ -855,6 +877,7 @@ void AP_GPS::update_instance(uint8_t instance)
     bool data_should_be_logged = false;
     if (!result) {
         if (tnow - timing[instance].last_message_time_ms > GPS_TIMEOUT_MS) {
+			
             memset((void *)&state[instance], 0, sizeof(state[instance]));
             state[instance].instance = instance;
             state[instance].hdop = GPS_UNKNOWN_DOP;
@@ -862,11 +885,16 @@ void AP_GPS::update_instance(uint8_t instance)
             timing[instance].last_message_time_ms = tnow;
             timing[instance].delta_time_ms = GPS_TIMEOUT_MS;
             // do not try to detect again if type is MAV or UAVCAN
-            if (_type[instance] == GPS_TYPE_MAV ||
+            if (_type[instance] == GPS_TYPE_UBLOX ||
+			//if(_type[instance] == GPS_TYPE_MAV ||
                 _type[instance] == GPS_TYPE_UAVCAN ||
                 _type[instance] == GPS_TYPE_UAVCAN_RTK_BASE ||
                 _type[instance] == GPS_TYPE_UAVCAN_RTK_ROVER) {
                 state[instance].status = NO_FIX;
+               //hal.console->printf("\nLMT0 %u", lmt);
+               // hal.console->printf("\nLMT2 %u", timing[instance].last_message_time_ms);
+               //hal.console->printf("\ntnow0 %u\n", tnow);
+               // hal.console->printf("\ndelta\n %u", tnow-lmt);
             } else {
                 // free the driver before we run the next detection, so we
                 // don't end up with two allocated at any time
@@ -877,18 +905,23 @@ void AP_GPS::update_instance(uint8_t instance)
             // log this data as a "flag" that the GPS is no longer
             // valid (see PR#8144)
             data_should_be_logged = true;
+			
         }
     } else {
+        
         if (state[instance].corrected_timestamp_updated) {
             // set the timestamp for this messages based on
             // set_uart_timestamp() or per specific transport in backend
             // , if available
-            tnow = state[instance].last_corrected_gps_time_us/1000U;
+            //tnow = state[instance].last_corrected_gps_time_us/1000U;
             state[instance].corrected_timestamp_updated = false;
         }
+        
         // delta will only be correct after parsing two messages
         timing[instance].delta_time_ms = tnow - timing[instance].last_message_time_ms;
-        timing[instance].last_message_time_ms = tnow;
+        timing[instance].last_message_time_ms = (uint32_t)tnow;
+        //hal.console->printf("\nLMT1 %u", timing[instance].last_message_time_ms);
+        //hal.console->printf("\nTNOW1 %u\n", tnow);
         // if GPS disabled for flight testing then don't update fix timing value
         if (state[instance].status >= GPS_OK_FIX_2D && !_force_disable_gps) {
             timing[instance].last_fix_time_ms = tnow;
@@ -1008,6 +1041,8 @@ void AP_GPS::inject_MBL_data(uint8_t* data, uint16_t length)
 void AP_GPS::update(void)
 {
     WITH_SEMAPHORE(rsem);
+	
+	//hal.console->printf("GPS receivers : %u", (unsigned int)GPS_MAX_RECEIVERS);
 
     for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
         update_instance(i);
@@ -1789,6 +1824,7 @@ void AP_GPS::calc_blended_state(void)
 #endif
     timing[GPS_BLENDED_INSTANCE].last_fix_time_ms = 0;
     timing[GPS_BLENDED_INSTANCE].last_message_time_ms = 0;
+    hal.console->printf("\nIn blended instance");
 
     // combine the states into a blended solution
     for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
@@ -1844,6 +1880,7 @@ void AP_GPS::calc_blended_state(void)
         }
         if (timing[i].last_message_time_ms > timing[GPS_BLENDED_INSTANCE].last_message_time_ms) {
             timing[GPS_BLENDED_INSTANCE].last_message_time_ms = timing[i].last_message_time_ms;
+            hal.console->printf("In blended instance 2");
         }
     }
 
@@ -1928,6 +1965,7 @@ void AP_GPS::calc_blended_state(void)
     }
     timing[GPS_BLENDED_INSTANCE].last_fix_time_ms = (uint32_t)temp_time_1;
     timing[GPS_BLENDED_INSTANCE].last_message_time_ms = (uint32_t)temp_time_2;
+    hal.console->printf("In blended instance 3");
 
 #if HAL_LOGGING_ENABLED
     if (timing[GPS_BLENDED_INSTANCE].last_message_time_ms > last_blended_message_time_ms &&

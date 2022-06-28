@@ -3,5 +3,5 @@
 
 def build(bld):
     bld.ap_example(
-        use='ap',
+        use=['ap','ExampleLibs'],
     )

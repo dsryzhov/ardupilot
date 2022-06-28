@@ -7,6 +7,42 @@
 
 #include <stdio.h>
 
+#define FAILSAFE_CHECK_MAX_PERIOD_MCS 500000
+
+#define FAILSAFE_STATISTICS_PERIOD_MCS 60000000
+void calcFailsafeCheckStatistics(const uint32_t tnow, const uint32_t last_timestamp) {
+    
+    static uint32_t max_delta_time = 0;
+    static uint32_t min_delta_time = FAILSAFE_STATISTICS_PERIOD_MCS;
+    static uint32_t check_count = 0;
+    static uint32_t mean_delta_time = 0;
+
+    static uint32_t delta_time_timestamp = 0;
+
+    if (delta_time_timestamp != 0) {
+         uint32_t delta_time = tnow - last_timestamp;
+         check_count++;
+
+         if (delta_time > max_delta_time) max_delta_time = delta_time;
+         if (delta_time < min_delta_time) min_delta_time = delta_time;
+         mean_delta_time += delta_time;
+
+        if (tnow - delta_time_timestamp > FAILSAFE_STATISTICS_PERIOD_MCS) { // calc statistics every one minute
+            mean_delta_time = mean_delta_time / check_count;
+            gcs().send_text(MAV_SEVERITY_DEBUG, "Failsafe max-min-mean: %u - %u - %u", max_delta_time, min_delta_time, mean_delta_time);
+            
+            delta_time_timestamp = tnow;
+            max_delta_time = 0;
+            min_delta_time = FAILSAFE_STATISTICS_PERIOD_MCS;
+            mean_delta_time = 0;
+            check_count = 0;
+        }
+    }
+    else {
+        delta_time_timestamp = tnow;
+    }
+
+}
 /*
   our failsafe strategy is to detect main loop lockup and disarm.
  */
@@ -29,8 +65,10 @@ void Rover::failsafe_check()
         return;
     }
 
-    if (tnow - last_timestamp > 200000) {
-        // we have gone at least 0.2 seconds since the main loop
+    // calcFailsafeCheckStatistics(tnow, last_timestamp);
+
+    if (tnow - last_timestamp > FAILSAFE_CHECK_MAX_PERIOD_MCS) {
+        // we have gone at least FAILSAFE_CHECK_MAX_PERIOD_MCS micro seconds since the main loop
         // ran. That means we're in trouble, or perhaps are in
         // an initialisation routine or log erase. disarm the motors
         // To-Do: log error
@@ -39,6 +77,7 @@ void Rover::failsafe_check()
             arming.disarm(AP_Arming::Method::CPUFAILSAFE);
         }
     }
+    
 }
 
 /*

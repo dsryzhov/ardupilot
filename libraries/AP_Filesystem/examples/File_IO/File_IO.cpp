@@ -25,7 +25,7 @@ void setup()
     board_config.init();
 
     //creating a test directory to store all files
-    dir_path = "./test_dir";
+    dir_path = "/SDCARD/test_dir";
     hal.console->printf("Creating directory - %s\n", dir_path);
     int ret = AP::FS().mkdir(dir_path);
     if (ret == -1) {

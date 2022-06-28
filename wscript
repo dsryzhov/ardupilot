@@ -649,12 +649,20 @@ def _build_common_taskgens(bld):
     # the tools and examples. This is the first step until the
     # dependency on the vehicles is reduced. Later we may consider
     # split into smaller pieces with well defined boundaries.
+
     bld.ap_stlib(
         name='ap',
         ap_vehicle='UNKNOWN',
         ap_libraries=bld.ap_get_all_libraries(),
     )
-
+	
+    bld.ap_stlib(
+        name='ExampleLibs',
+        ap_vehicle='UNKNOWN',
+        ap_libraries=bld.ap_get_all_libraries(),
+    )
+	
+	
     if bld.env.HAS_GTEST:
         bld.libgtest(cxxflags=['-include', 'ap_config.h'])
 

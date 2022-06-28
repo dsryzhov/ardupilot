@@ -176,6 +176,8 @@ bool AP_FlashStorage::protected_switch_full_sector(void)
 // write some data to virtual EEPROM
 bool AP_FlashStorage::write(uint16_t offset, uint16_t length)
 {
+	//printf("\nAP_FlashStorage::write");
+	
     if (write_error) {
         return false;
     }
@@ -192,11 +194,13 @@ bool AP_FlashStorage::write(uint16_t offset, uint16_t length)
         const uint32_t space_available = flash_sector_size - write_offset;
         const uint32_t space_required = sizeof(struct block_header) + max_write + reserved_space;
         if (space_available < space_required) {
+            printf("\nSpace : A %u R %u", space_available, space_required);
             if (!switch_sectors()) {
                 if (!flash_erase_ok()) {
                     return false;
                 }
                 if (!switch_full_sector()) {
+                    printf("!switch_full_sector()");
                     return false;                    
                 }
             }
@@ -217,6 +221,7 @@ bool AP_FlashStorage::write(uint16_t offset, uint16_t length)
         memcpy(blk.data, &mem_buffer[block_ofs], block_nbytes);
 
 #if AP_FLASHSTORAGE_TYPE == AP_FLASHSTORAGE_TYPE_F4
+		//printf("\nAP_FLASHSTORAGE_TYPE_F4");
         if (!flash_write(current_sector, write_offset, (uint8_t*)&blk.header, sizeof(blk.header))) {
             return false;
         }
@@ -228,12 +233,14 @@ bool AP_FlashStorage::write(uint16_t offset, uint16_t length)
             return false;
         }
 #elif AP_FLASHSTORAGE_TYPE == AP_FLASHSTORAGE_TYPE_F1
+		//printf("\nAP_FLASHSTORAGE_TYPE_F1");
         blk.header.state = BLOCK_STATE_VALID;
         if (!flash_write(current_sector, write_offset, (uint8_t*)&blk, sizeof(blk.header) + block_nbytes)) {
             return false;
         }
 #elif AP_FLASHSTORAGE_TYPE == AP_FLASHSTORAGE_TYPE_H7 || AP_FLASHSTORAGE_TYPE == AP_FLASHSTORAGE_TYPE_G4
-        blk.header.state = BLOCK_STATE_VALID;
+        //printf("\nAP_FLASHSTORAGE_TYPE == AP_FLASHSTORAGE_TYPE_H7 || AP_FLASHSTORAGE_TYPE == AP_FLASHSTORAGE_TYPE_G4");
+		blk.header.state = BLOCK_STATE_VALID;
         if (!flash_write(current_sector, write_offset, (uint8_t*)&blk, sizeof(blk.header) + max_write)) {
             return false;
         }
@@ -327,6 +334,7 @@ bool AP_FlashStorage::load_sector(uint8_t sector)
  */
 bool AP_FlashStorage::erase_sector(uint8_t sector, bool mark_available)
 {
+	//printf("\nAP_FlashStorage::erase_sector");
     if (!flash_erase(sector)) {
         return false;
     }
@@ -335,6 +343,8 @@ bool AP_FlashStorage::erase_sector(uint8_t sector, bool mark_available)
     }
     struct sector_header header;
     header.set_state(SECTOR_STATE_AVAILABLE);
+	
+
     return flash_write(sector, 0, (const uint8_t *)&header, sizeof(header));
 }
 

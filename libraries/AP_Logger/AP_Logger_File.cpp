@@ -65,6 +65,8 @@ void AP_Logger_File::ensure_log_directory_exists()
 
 void AP_Logger_File::Init()
 {
+	//hal.console->printf("Inside AP_Logger_File::Init");
+	
     // determine and limit file backend buffersize
     uint32_t bufsize = _front._params.file_bufsize;
     bufsize *= 1024;
@@ -121,6 +123,8 @@ bool AP_Logger_File::log_exists(const uint16_t lognum) const
 
 void AP_Logger_File::periodic_1Hz()
 {
+	//hal.console->printf("AP_Logger_File::periodic_1Hz");
+	
     AP_Logger_Backend::periodic_1Hz();
 
     if (_initialised &&
@@ -161,6 +165,7 @@ void AP_Logger_File::periodic_1Hz()
 
 void AP_Logger_File::periodic_fullrate()
 {
+	//hal.console->printf("AP_Logger_File::periodic_fullrate()");
     AP_Logger_Backend::push_log_blocks();
 }
 
@@ -441,6 +446,7 @@ bool AP_Logger_File::StartNewLogOK() const
 /* Write a block of data at current offset */
 bool AP_Logger_File::_WritePrioritisedBlock(const void *pBuffer, uint16_t size, bool is_critical)
 {
+	//hal.console->printf("Inside AP_Logger_File::_WritePrioritisedBlock");
     WITH_SEMAPHORE(semaphore);
 
     if (! WriteBlockCheckStartupMessages()) {
@@ -486,6 +492,7 @@ bool AP_Logger_File::_WritePrioritisedBlock(const void *pBuffer, uint16_t size, 
         return false;
     }
 
+	//printf("Before writing to buffer");
     _writebuf.write((uint8_t*)pBuffer, size);
     df_stats_gather(size, _writebuf.space());
     return true;
@@ -739,9 +746,11 @@ void AP_Logger_File::PrepForArming_start_logging()
  */
 void AP_Logger_File::start_new_log(void)
 {
+    //hal.console->printf("\nStart AP_Logger_File::start_new_log");
     if (recent_open_error()) {
         // we have previously failed to open a file - don't try again
         // to prevent us trying to open files while in flight
+        //hal.console->printf("\nAP_Logger_File::start_new_log recent_open_error");
         return;
     }
 
@@ -749,6 +758,7 @@ void AP_Logger_File::start_new_log(void)
         // don't start a new log while erasing, but record that we
         // want to start logging when erase finished
         erase.was_logging = true;
+        //hal.console->printf("\nAP_Logger_File::start_new_log erase log_num");
         return;
     }
 
@@ -762,11 +772,13 @@ void AP_Logger_File::start_new_log(void)
     // to open the log...
     _open_error_ms = AP_HAL::millis();
 
+    //hal.console->printf("\nAP_Logger_File::start_new_log before stop_logging");
     stop_logging();
 
     start_new_log_reset_variables();
 
     if (_read_fd != -1) {
+        //hal.console->printf("\nAP_Logger_File::start_new_log before close");
         AP::FS().close(_read_fd);
         _read_fd = -1;
     }
@@ -785,6 +797,7 @@ void AP_Logger_File::start_new_log(void)
         log_num = 1;
     }
     if (!write_fd_semaphore.take(1)) {
+        hal.console->printf("\nAP_Logger_File::start_new_log write_fd_semaphore");
         return;
     }
     if (_write_filename) {
@@ -794,6 +807,7 @@ void AP_Logger_File::start_new_log(void)
     _write_filename = _log_file_name(log_num);
     if (_write_filename == nullptr) {
         write_fd_semaphore.give();
+        //hal.console->printf("\nAP_Logger_File::start_new_log _write_filename == nullptr");
         return;
     }
 
@@ -835,6 +849,7 @@ void AP_Logger_File::start_new_log(void)
     free(fname);
     if (fd == -1) {
         _open_error_ms = AP_HAL::millis();
+        //hal.console->printf("\nAP_Logger_File::start_new_log fd==-1");
         return;
     }
 
@@ -846,6 +861,7 @@ void AP_Logger_File::start_new_log(void)
 
     if (written < to_write) {
         _open_error_ms = AP_HAL::millis();
+        //hal.console->printf("\nAP_Logger_File::start_new_log open error");
         return;
     }
 
@@ -886,11 +902,14 @@ void AP_Logger_File::io_timer(void)
 {
     uint32_t tnow = AP_HAL::millis();
     _io_timer_heartbeat = tnow;
+    //hal.console->printf("\nAP_Logger_File::io_timer calling start_new_log");
 
     if (start_new_log_pending) {
+        //hal.console->printf("\nAP_Logger_File::io_timer true");
         start_new_log();
         start_new_log_pending = false;
-    }
+    } //else
+        //hal.console->printf("\nAP_Logger_File::io_timer false");
 
     if (erase.log_num != 0) {
         // continue erase
@@ -899,6 +918,7 @@ void AP_Logger_File::io_timer(void)
     }
 
     if (_write_fd == -1 || !_initialised || recent_open_error()) {
+        //hal.console->printf("\nreturn 1");
         return;
     }
 
@@ -951,6 +971,8 @@ void AP_Logger_File::io_timer(void)
         write_fd_semaphore.give();
         return;
     }
+
+    //hal.console->printf("\nio_timer AP::FS().write");
     ssize_t nwritten = AP::FS().write(_write_fd, head, nbytes);
     last_io_operation = "";
     if (nwritten <= 0) {

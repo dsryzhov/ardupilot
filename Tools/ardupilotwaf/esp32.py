@@ -19,7 +19,7 @@ import pickle
 import subprocess
 
 def configure(cfg):
-
+    print ("Inside esp32 configure")
     bldnode = cfg.bldnode.make_node(cfg.variant)
     def srcpath(path):
         return cfg.srcnode.make_node(path).abspath()
@@ -59,11 +59,15 @@ def configure(cfg):
 
 
 def pre_build(self):
+    print ("Inside esp32 prebuild")
+    print(self.path.name)
     """Configure esp-idf as lib target"""
     lib_vars = OrderedDict()
     lib_vars['ARDUPILOT_CMD'] = self.cmd
     lib_vars['ARDUPILOT_LIB'] = self.bldnode.find_or_declare('lib/').abspath()
     lib_vars['ARDUPILOT_BIN'] = self.bldnode.find_or_declare('lib/bin').abspath()
+    lib_vars['EXAMPLE_LINK'] = 'no'
+    lib_vars['EXAMPLE_LIB'] = self.bldnode.find_or_declare('lib/examples').abspath()
     esp_idf = self.cmake(
             name='esp-idf',
             cmake_vars=lib_vars,
@@ -87,13 +91,21 @@ def pre_build(self):
     tsk = load_generated_includes(env=self.env)
     tsk.set_inputs(self.path.find_resource('esp-idf_build/includes.list'))
     self.add_to_group(tsk)
+    print ("After esp32 prebuild")
 
 
 @feature('esp32_ap_program')
 @after_method('process_source')
 def esp32_firmware(self):
+    print ("Inside esp32_firmware")
+    print(self.path.name)
+
     self.link_task.always_run = True
+	
     esp_idf = self.bld.cmake('esp-idf')
+    esp_idf.vars['EXAMPLE_NAME'] = 'lib'+self.path.name+'.a'
+    print("Example name : " + esp_idf.vars['EXAMPLE_NAME'])
+    print("Cmd:" + esp_idf.vars['ARDUPILOT_CMD'])
 
     build = esp_idf.build('all', target='esp-idf_build/ardupilot.bin')
     build.post()

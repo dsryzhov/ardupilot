@@ -367,8 +367,8 @@ void Scheduler::_io_thread(void* arg)
 #ifdef SCHEDDEBUG
     printf("%s:%d initialised \n", __PRETTY_FUNCTION__, __LINE__);
 #endif
-    uint32_t last_sd_start_ms = AP_HAL::millis();
-    while (true) {
+    uint32_t last_sd_start_ms = AP_HAL::millis();    
+	while (true) {
         sched->delay_microseconds(1000);
         // run registered IO processes
         sched->_run_io();
@@ -432,6 +432,7 @@ void Scheduler::_uart_thread(void *arg)
 #ifdef SCHEDDEBUG
     printf("%s:%d initialised\n", __PRETTY_FUNCTION__, __LINE__);
 #endif
+	//printf("Num serial: %u", (unsigned int)hal.num_serial);
     while (true) {
         sched->delay_microseconds(1000);
         for (uint8_t i=0; i<hal.num_serial; i++) {
@@ -473,10 +474,12 @@ void IRAM_ATTR Scheduler::_main_thread(void *arg)
 #endif
     Scheduler *sched = (Scheduler *)arg;
     hal.serial(0)->begin(115200);
-    hal.serial(1)->begin(57600);
-    hal.serial(2)->begin(57600);
+	hal.serial(1)->begin(9600);
+	hal.serial(2)->begin(9600);
+//rds    hal.serial(1)->begin(57600);
+//rds    hal.serial(2)->begin(57600);
     //hal.uartC->begin(921600);
-    hal.serial(3)->begin(115200);
+    hal.serial(3)->begin(9600);
 
 #ifndef HAL_DISABLE_ADC_DRIVER
     hal.analogin->init();

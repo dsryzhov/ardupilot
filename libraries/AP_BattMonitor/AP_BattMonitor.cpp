@@ -198,6 +198,8 @@ AP_BattMonitor::init()
     _params[0]._type.set_default(int8_t(HAL_BATT_MONITOR_DEFAULT));
 #endif
 
+    //hal.console->printf("\nAP_BattMonitor::init");        
+
     // create each instance
     for (uint8_t instance=0; instance<AP_BATT_MONITOR_MAX_INSTANCES; instance++) {
         // clear out the cell voltages
@@ -373,6 +375,8 @@ void AP_BattMonitor::read()
         logger->Write_Power();
     }
 #endif
+
+    //hal.console->printf("\nAP_BattMonitor::read with num instances: %d", _num_instances);        
 
     for (uint8_t i=0; i<_num_instances; i++) {
         if (drivers[i] != nullptr && get_type(i) != Type::NONE) {

@@ -6,6 +6,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Scheduler/AP_Scheduler.h>
 #include <AP_Logger/AP_Logger.h>
+#include <AP_BoardConfig/AP_BoardConfig.h>
 #include <GCS_MAVLink/GCS_Dummy.h>
 #include <stdio.h>
 
@@ -29,6 +30,8 @@ static const struct LogStructure log_structure[] = {
     }
 };
 
+
+
 #define NUM_PACKETS 500
 
 static uint16_t log_num;
@@ -37,25 +40,75 @@ class AP_LoggerTest {
 public:
     void setup();
     void loop();
+    void one_hz_print(void);
+    void ins_update(void);
+    void update_logging1();
 
 private:
 
+    AP_InertialSensor ins;
+#if HAL_EXTERNAL_AHRS_ENABLED
+    AP_ExternalAHRS eAHRS;
+#endif // HAL_EXTERNAL_AHRS_ENABLED
+
+    static const AP_Scheduler::Task scheduler_tasks[];
+
     AP_Int32 log_bitmask;
     AP_Logger logger{log_bitmask};
-    AP_Scheduler scheduler;
+    AP_Scheduler scheduler{nullptr};
 
 };
 
+static AP_BoardConfig board_config;
 static AP_LoggerTest loggertest;
+
+#define SCHED_TASK(func, _interval_ticks, _max_time_micros, _priority) SCHED_TASK_CLASS(AP_LoggerTest, &loggertest, func, _interval_ticks, _max_time_micros, _priority)
+
+const AP_Scheduler::Task AP_LoggerTest::scheduler_tasks[] = {
+    SCHED_TASK(ins_update,             50,   1000, 3),
+    SCHED_TASK(one_hz_print,            1,   1000, 6),
+//    SCHED_TASK(update_logging1,        1,    1000,  45),
+//    SCHED_TASK_CLASS(AP_Logger,           &loggertest.logger,           periodic_tasks, 50,  300, 108),
+
+};
+
+void AP_LoggerTest::update_logging1(void) {
+    hal.console->printf("\nWrite vibration");
+    //ins.Write_Vibration();    
+}
+
+void AP_LoggerTest::one_hz_print(void)
+{
+    hal.console->printf("one_hz: t=%lu\n", (unsigned long)AP_HAL::millis());
+}
+
+
+/*
+  update inertial sensor, reading data 
+ */
+void AP_LoggerTest::ins_update(void)
+{
+    //ins_counter++;
+   ins.update();
+}
+
 
 void AP_LoggerTest::setup(void)
 {
+//    board_config.init();
+//    ins.init(scheduler.get_loop_rate_hz());
     hal.console->printf("Logger Log Test 1.0\n");
+//    scheduler.init(&scheduler_tasks[0], ARRAY_SIZE(scheduler_tasks), (uint32_t)-1);
+    log_num = 0;
+    
 
     log_bitmask = (uint32_t)-1;
     logger.Init(log_structure, ARRAY_SIZE(log_structure));
     logger.set_vehicle_armed(true);
+    
     logger.Write_Message("AP_Logger Test");
+
+    
 #ifdef DEBUG_RATES
     hal.console->printf("| Type | Size | 10Hz(bs) | 25Hz(bs) | 400Hz(Kbs) |\n");
     for (uint16_t i = 0; i < ARRAY_SIZE(log_structure); i++) {
@@ -94,6 +147,7 @@ void AP_LoggerTest::setup(void)
         hal.scheduler->delay(20);
     }
 
+
     hal.console->printf("Average write time %.1f usec/byte\n", 
                        (double)total_micros/((double)i*sizeof(struct log_Test)));
 
@@ -119,11 +173,13 @@ void AP_LoggerTest::setup(void)
     logger.flush();
 #endif
 
-    logger.set_vehicle_armed(false);
+    //logger.set_vehicle_armed(false);
+    
 }
 
 void AP_LoggerTest::loop(void)
 {
+    //scheduler.loop();
     hal.console->printf("\nTest complete.\n");
     hal.scheduler->delay(20000);
 }

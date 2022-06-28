@@ -186,6 +186,7 @@ void mount_sdcard()
 #endif // emd mmc
 
 
+
 #ifdef HAL_ESP32_SDSPI
 ESP32::SPIBusDesc bus_ = HAL_ESP32_SDSPI;
 
@@ -193,7 +194,7 @@ void mount_sdcard_spi()
 {
 
     esp_err_t ret;
-    printf("Mounting sd \n");
+    printf("Mounting sd card as SDSPI \n");
     WITH_SEMAPHORE(sem);
 
     //  In SPI mode, pins can be customized...
